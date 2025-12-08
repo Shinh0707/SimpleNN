@@ -49,5 +49,15 @@ namespace SimpleNN.Graph
         {
             return _ctx.ToString();
         }
+        public override bool Equals(object obj)
+        {
+            if (obj is not TensorBox other) return false;
+            return ReferenceEquals(_ctx, other._ctx);
+        }
+        public override int GetHashCode()
+        {
+            if (_ctx == null) return 0;
+            return _ctx.GetHashCode() ^ (_ctx.Tensor?.GetHashCode() ?? 0);
+        }
     }
 }

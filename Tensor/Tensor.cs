@@ -166,6 +166,41 @@ namespace SimpleNN.Tensor
             infiniteValue = 0;
             return false;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is not Tensor other) return false;
+            if (ReferenceEquals(this, other)) return true;
+            if (!IsSameSizeAndStrides(this, other)) return false;
+            if (_data.Length != other._data.Length) return false;
+
+            for (int i = 0; i < _data.Length; i++)
+            {
+                if (!_data[i].Equals(other._data[i])) return false;
+            }
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                if (_size != null)
+                {
+                    foreach (var s in _size) hash = hash * 23 + s;
+                }
+                if (_strides != null)
+                {
+                    foreach (var s in _strides) hash = hash * 23 + s;
+                }
+                if (_data != null)
+                {
+                    foreach (var d in _data) hash = hash * 23 + d.GetHashCode();
+                }
+                return hash;
+            }
+        }
         public override string ToString()
         {
             StringBuilder sb = new();
