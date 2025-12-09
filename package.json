@@ -1,0 +1,10 @@
+{
+    "name": "com.shinh0707.simplenn",
+    "version": "1.0.0",
+    "displayName": "SimpleNN",
+    "description": "C# native neural network library for Unity",
+    "unity": "6.2",
+    "author": {
+        "name": "Shinh0707"
+    }
+}
