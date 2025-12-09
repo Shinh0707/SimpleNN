@@ -7,7 +7,7 @@ namespace SimpleNN.Tensor
     public partial class Tensor
     {
         protected float[] _data;
-        internal float[] Data => _data;
+        public float[] Data => _data;
         protected int[] _size;
         public int[] Size
         {
@@ -54,11 +54,11 @@ namespace SimpleNN.Tensor
                 (int[])other.Strides.Clone()
             );
         }
-        internal void SetData(Tensor other)
+        public void SetData(Tensor other)
         {
             SetData(other._data);
         }
-        internal void SetData(float[] data)
+        public void SetData(float[] data)
         {
             if (data.Length == _data.Length)
             {
