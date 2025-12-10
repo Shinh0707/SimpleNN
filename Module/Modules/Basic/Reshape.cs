@@ -18,7 +18,7 @@ namespace SimpleNN.Module
     {
         private int _startIndex;
         private int _endIndex;
-        public Flatten(int startIndex = 0, int endIndex = -1)
+        public Flatten(int startIndex = 1, int endIndex = -1)
         {
             _startIndex = startIndex;
             _endIndex = endIndex;
