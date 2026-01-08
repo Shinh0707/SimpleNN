@@ -9,6 +9,7 @@ namespace SimpleNN.Tensor
         MinMaxNormalizedMagnitude, // 幅を0-1に正規化
         Decibel, // 幅をデシベルに変換
         MinMaxNormalizedDecibel, // 幅をデシベルに変換して0-1に正規化
+        NormalizedDecibel
     }
     public enum MelSpecReductionType
     {
@@ -80,15 +81,11 @@ namespace SimpleNN.Tensor
         // STFTをMelSpectrogramに変換する
         public Tensor FromSTFT(Tensor stft)
         {
-            // stft: (n_freq, n_frames, 2)
-            // 1. Compute Magnitude/Power
             Tensor magnitude;
             var parts = Tensor.Unstack(stft.NDim - 1, stft); // Split real/imag
             var real = parts[0];
             var imag = parts[1];
             
-            // mag = sqrt(real^2 + imag^2)
-            // power = mag^p
             var magSq = Tensor.Square(real) + Tensor.Square(imag);
             
             if (power == 2.0f)
@@ -100,13 +97,20 @@ namespace SimpleNN.Tensor
                 magnitude = Tensor.Pow(magSq, power / 2.0f); 
             }
 
-            // 2. Apply Mel Filter Bank
-            // melBasis: (n_mels, n_freq)
-            // magnitude: (n_freq, n_frames)
-            // result: (n_mels, n_frames)
             Tensor melSpec = Tensor.MatMul(melBasis, magnitude);
 
-            // 3. Apply Scaling
+            switch (reductionType)
+            {
+                case MelSpecReductionType.TimeMean:
+                    melSpec = Tensor.Mean(melSpec, 1, false); // dim 1 is time
+                    break;
+                case MelSpecReductionType.TimeMax:
+                    melSpec = Tensor.Max(melSpec, 1, false);
+                    break;
+                case MelSpecReductionType.None:
+                default:
+                    break;
+            }
             switch (scaleType)
             {
                 case MelSpecScaleType.Magnitude:
@@ -121,22 +125,10 @@ namespace SimpleNN.Tensor
                 case MelSpecScaleType.MinMaxNormalizedDecibel:
                     melSpec = MinMaxNormalize(AmplitudeToDB(melSpec));
                     break;
-            }
-
-            // 4. Apply Reduction
-            switch (reductionType)
-            {
-                case MelSpecReductionType.TimeMean:
-                    melSpec = Tensor.Mean(melSpec, 1, false); // dim 1 is time
-                    break;
-                case MelSpecReductionType.TimeMax:
-                    melSpec = Tensor.Max(melSpec, 1, false);
-                    break;
-                case MelSpecReductionType.None:
-                default:
+                case MelSpecScaleType.NormalizedDecibel:
+                    melSpec = Normalize(AmplitudeToDB(melSpec), -20, 0);
                     break;
             }
-
             return melSpec;
         }
 
@@ -164,13 +156,16 @@ namespace SimpleNN.Tensor
         {
             float minVal = -Tensor.Max(-x).Item(); // Min
             float maxVal = Tensor.Max(x).Item();
-            
-            if (MathF.Abs(maxVal - minVal) < 1e-6f)
+            return Normalize(x, minVal, maxVal);
+        }
+
+        private Tensor Normalize(Tensor x, float min, float max)
+        {   
+            if (MathF.Abs(max - min) < 1e-6f)
             {
                 return Tensor.ZerosLike(x);
-            }
-            
-            return (x - minVal) / (maxVal - minVal);
+            }   
+            return (Tensor.Maximum(x,min) - min) / (max - min);
         }
 
         private Tensor CreateMelFilterBank(int sampleRate, int nFft, int nMels, int fMin, float fMax)
