@@ -202,6 +202,13 @@ namespace SimpleNN.Tensor
         {
             return ApplyMap(a, x => MathF.Pow(_base, x));
         }
+        public static Tensor MagnitudeSquared(Tensor real, Tensor imag)
+        {
+            return ApplyBroadcastedOperation(real, imag, 
+                (vr, vi) => vr * vr + vi * vi,
+                (r, i) => r * r + i * i
+            );
+        }
         public static Tensor Neg(Tensor a)
         {
             return ApplyMap(a, x => -x, x => -x);
@@ -280,6 +287,7 @@ namespace SimpleNN.Tensor
         {
             return ApplyMap(a, x => 1.0f / (1.0f + MathF.Exp(-x)));
         }
+        
         public static Tensor LGamma(Tensor a)
         {
             return ApplyMap(a, Operation.LGamma);

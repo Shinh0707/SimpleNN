@@ -30,6 +30,7 @@ namespace SimpleNN.Tensor
         private float power;
         private MelSpecScaleType scaleType;
         private MelSpecReductionType reductionType;
+        private FFTPlan fftPlan;
 
         private Tensor melBasis;
 
@@ -64,6 +65,7 @@ namespace SimpleNN.Tensor
             this.power = power;
             this.scaleType = scaleType;
             this.reductionType = reductionType;
+            fftPlan = new FFTPlan(n_fft);
 
             float fMaxVal = f_max ?? (sample_rate / 2.0f);
             this.melBasis = CreateMelFilterBank(sample_rate, n_fft, n_mels, f_min, fMaxVal);
@@ -72,22 +74,14 @@ namespace SimpleNN.Tensor
         // 入力の音声をMelSpectrogramに変換する
         public Tensor FromAudio(Tensor audio)
         {
-            // STFT expects (..., time)
-            // TensorFFT.STFT returns (freq, time, 2)
-            var stft = TensorFFT.STFT(audio, n_fft, hop_length, win_length, window, center, mode, normalized, onesided);
-            return FromSTFT(stft);
+            var (real, imag) = TensorFFT.STFT(audio, n_fft, hop_length, win_length, window, center, mode, normalized, onesided, fftPlan);
+            return FromSTFT(real, imag);
         }
 
-        // STFTをMelSpectrogramに変換する
-        public Tensor FromSTFT(Tensor stft)
+        public Tensor FromSTFT(Tensor real, Tensor imag)
         {
+            Tensor magSq = Tensor.MagnitudeSquared(real, imag);
             Tensor magnitude;
-            var parts = Tensor.Unstack(stft.NDim - 1, stft); // Split real/imag
-            var real = parts[0];
-            var imag = parts[1];
-            
-            var magSq = Tensor.Square(real) + Tensor.Square(imag);
-            
             if (power == 2.0f)
             {
                 magnitude = magSq;
@@ -126,7 +120,7 @@ namespace SimpleNN.Tensor
                     melSpec = MinMaxNormalize(AmplitudeToDB(melSpec));
                     break;
                 case MelSpecScaleType.NormalizedDecibel:
-                    melSpec = Normalize(AmplitudeToDB(melSpec), -20, 0);
+                    melSpec = Normalize(AmplitudeToDB(melSpec), -40, 0);
                     break;
             }
             return melSpec;
